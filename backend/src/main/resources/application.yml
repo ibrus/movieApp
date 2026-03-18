@@ -11,3 +11,6 @@ spring:
       file: "../docker-compose.yml"
       # Keep shared dev services running when the app stops
       lifecycle-management: start-only
+  jpa:
+    hibernate:
+      ddl-auto: update
