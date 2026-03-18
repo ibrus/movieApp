@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+# DB config is env-driven via standard Spring keys (spring.datasource.*).
+# You don't need this for Step 1's /api/hello, but it's ready for the next step.
+
+spring:
+  docker:
+    compose:
+      # Our compose file lives in the repo root, not in backend/
+      file: "../docker-compose.yml"
+      # Keep shared dev services running when the app stops
+      lifecycle-management: start-only

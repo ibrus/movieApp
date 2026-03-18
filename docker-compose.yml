@@ -1,0 +1,25 @@
+name: movieapp
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: movieapp-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      # Env-driven credentials (dev-only). Override via your shell env.
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-movieapp}
+      MYSQL_USER: ${MYSQL_USER:-movieapp}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-movieapp}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+volumes:
+  mysql_data:

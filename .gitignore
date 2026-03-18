@@ -1,0 +1,39 @@
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+
+# Java / Gradle
+backend/.gradle/
+backend/build/
+backend/out/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/.swc/
+frontend/coverage/
+frontend/.pnp.*
+frontend/.yarn/*
+
+# General
+*.iml
+*.tmp
+*.swp
+*~

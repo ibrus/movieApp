@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#
+# Minimal Gradle wrapper launcher for this repo.
+# It uses the wrapper jars in gradle/wrapper and the distributionUrl from gradle-wrapper.properties.
+#
+
+set -eu
+
+APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+
+JAVA_EXEC="${JAVA_HOME:-}/bin/java"
+if [ ! -x "$JAVA_EXEC" ]; then
+  JAVA_EXEC="java"
+fi
+
+CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar:$APP_HOME/gradle/wrapper/gradle-wrapper-shared.jar:$APP_HOME/gradle/wrapper/gradle-cli.jar:$APP_HOME/gradle/wrapper/gradle-files.jar:$APP_HOME/gradle/wrapper/gradle-stdlib-java-extensions.jar:$APP_HOME/gradle/wrapper/failureaccess.jar"
+
+exec "$JAVA_EXEC" \
+  -Dorg.gradle.appname=gradlew \
+  -classpath "$CLASSPATH" \
+  org.gradle.wrapper.GradleWrapperMain \
+  "$@"
