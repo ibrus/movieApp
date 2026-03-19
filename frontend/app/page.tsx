@@ -18,7 +18,7 @@ type UserDto = {
 type RegisterResponse = UserDto;
 
 type LoginResponse = {
-  message: string;
+  token: string;
   user: UserDto;
 };
 
@@ -38,6 +38,9 @@ export default function Home() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginMessage, setLoginMessage] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
 
@@ -144,13 +147,59 @@ export default function Home() {
         if (data?.user) {
           setCurrentUser(data.user);
         }
-        setLoginMessage(data?.message ?? "Login successful.");
+        if (data?.token) {
+          setAuthToken(data.token);
+        }
+        setProfileError(null);
+        setLoginMessage("Login successful.");
         setLoginPassword("");
       }
     } catch (e) {
       setLoginError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoginLoading(false);
+    }
+  }
+
+  async function handleLoadProfile() {
+    if (!authToken) {
+      setProfileError("Log in first to get a JWT.");
+      return;
+    }
+
+    setProfileError(null);
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        cache: "no-store",
+      });
+
+      const text = await res.text();
+      let parsed: unknown = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        // ignore json parse errors; we still show status text below
+      }
+
+      if (!res.ok) {
+        const message =
+          typeof parsed === "object" && parsed && "message" in parsed
+            ? String((parsed as { message?: unknown }).message ?? `Failed to load profile (${res.status})`)
+            : `Failed to load profile (${res.status})`;
+        setProfileError(message);
+        return;
+      }
+
+      setCurrentUser(parsed as UserDto);
+    } catch (e) {
+      setProfileError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setProfileLoading(false);
     }
   }
 
@@ -249,10 +298,17 @@ export default function Home() {
           </form>
           {loginMessage && <p className={styles.success}>{loginMessage}</p>}
           {loginError && <p className={styles.error}>{loginError}</p>}
+          <p className={styles.muted}>
+            Token: {authToken ? `${authToken.slice(0, 24)}...` : "Not set"}
+          </p>
+          <button type="button" className={styles.button} onClick={handleLoadProfile} disabled={profileLoading || !authToken}>
+            {profileLoading ? "Loading profile…" : "Load profile"}
+          </button>
+          {profileError && <p className={styles.error}>{profileError}</p>}
         </section>
 
         <section className={styles.section}>
-          <h2 className={styles.subtitle}>Current user (frontend state only)</h2>
+          <h2 className={styles.subtitle}>Current user</h2>
           {currentUser ? (
             <div className={styles.card}>
               <p>

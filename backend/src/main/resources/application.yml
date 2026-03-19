@@ -4,6 +4,17 @@ server:
 # DB config is env-driven via standard Spring keys (spring.datasource.*).
 # You don't need this for Step 1's /api/hello, but it's ready for the next step.
 
+springdotenv:
+  # Load .env from the repo root even when running from backend/
+  directory: ".."
+  filename: ".env"
+  ignore-if-missing: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expires-in-seconds: ${JWT_EXPIRES_IN_SECONDS:3600}
+
 spring:
   docker:
     compose:
