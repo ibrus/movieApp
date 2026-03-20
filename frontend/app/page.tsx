@@ -22,6 +22,21 @@ type LoginResponse = {
   user: UserDto;
 };
 
+type TmdbMovieSearchResult = {
+  id?: number;
+  title?: string;
+  release_date?: string;
+  vote_average?: number;
+  overview?: string;
+  poster_path?: string | null;
+};
+
+type TmdbMovieSearchResponse = {
+  page?: number;
+  totalResults?: number;
+  results: TmdbMovieSearchResult[];
+};
+
 export default function Home() {
   const [hello, setHello] = useState<HelloResponse | null>(null);
   const [helloError, setHelloError] = useState<string | null>(null);
@@ -43,6 +58,12 @@ export default function Home() {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
+
+  const [movieQuery, setMovieQuery] = useState("");
+  const [movieSearchLoading, setMovieSearchLoading] = useState(false);
+  const [movieSearchError, setMovieSearchError] = useState<string | null>(null);
+  const [movieSearchPerformed, setMovieSearchPerformed] = useState(false);
+  const [movieSearchResults, setMovieSearchResults] = useState<TmdbMovieSearchResult[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +224,63 @@ export default function Home() {
     }
   }
 
+  async function handleMovieSearch(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!authToken) {
+      setMovieSearchError("Log in first to get a JWT.");
+      setMovieSearchPerformed(true);
+      return;
+    }
+
+    const query = movieQuery.trim();
+    if (!query) {
+      setMovieSearchError("Please enter a movie title to search.");
+      setMovieSearchPerformed(true);
+      return;
+    }
+
+    setMovieSearchError(null);
+    setMovieSearchLoading(true);
+    setMovieSearchPerformed(true);
+    setMovieSearchResults([]);
+
+    try {
+      const url = `/api/movies/search?query=${encodeURIComponent(query)}&page=1`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        cache: "no-store",
+      });
+
+      const text = await res.text();
+      let parsed: unknown = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        // ignore json parse errors; we still show status text below
+      }
+
+      if (!res.ok) {
+        const message =
+          typeof parsed === "object" && parsed && "message" in parsed
+            ? String((parsed as { message?: unknown }).message ?? `Search failed (${res.status})`)
+            : `Search failed (${res.status})`;
+        setMovieSearchError(message);
+        return;
+      }
+
+      const data = (parsed as TmdbMovieSearchResponse | null) ?? null;
+      setMovieSearchResults(data?.results ?? []);
+    } catch (e) {
+      setMovieSearchError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMovieSearchLoading(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -321,6 +399,84 @@ export default function Home() {
             </div>
           ) : (
             <p className={styles.muted}>No user is currently logged in.</p>
+          )}
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.subtitle}>TMDB Movie Search</h2>
+          <form onSubmit={handleMovieSearch} className={styles.searchForm}>
+            <label className={styles.label}>
+              <span>Movie title</span>
+              <input
+                type="text"
+                required
+                value={movieQuery}
+                onChange={(e) => setMovieQuery(e.target.value)}
+                className={styles.input}
+                placeholder="e.g. fight club"
+              />
+            </label>
+
+            <button
+              type="submit"
+              className={styles.button}
+              disabled={movieSearchLoading || !authToken}
+              title={!authToken ? "Log in first to enable searching" : undefined}
+            >
+              {movieSearchLoading ? "Searching…" : "Search"}
+            </button>
+          </form>
+
+          {!authToken && (
+            <p className={styles.muted}>
+              Log in to search TMDB.
+            </p>
+          )}
+
+          {movieSearchError && <p className={styles.error}>{movieSearchError}</p>}
+          {movieSearchLoading && <p className={styles.muted}>Calling TMDB…</p>}
+
+          {movieSearchPerformed && !movieSearchLoading && movieSearchResults.length === 0 && !movieSearchError && (
+            <p className={styles.muted}>No results found.</p>
+          )}
+
+          {movieSearchResults.length > 0 && (
+            <>
+              <p className={styles.muted}>
+                Showing {movieSearchResults.length} result{movieSearchResults.length === 1 ? "" : "s"}.
+              </p>
+              <div className={styles.resultsGrid}>
+                {movieSearchResults.map((m) => {
+                  const year = m.release_date ? m.release_date.slice(0, 4) : null;
+                  const vote = typeof m.vote_average === "number" ? m.vote_average.toFixed(1) : null;
+                  const overview = (m.overview ?? "").trim();
+                  const overviewSnippet = overview.length > 180 ? `${overview.slice(0, 180)}…` : overview;
+                  const posterUrl = m.poster_path
+                    ? `https://image.tmdb.org/t/p/w200${m.poster_path}`
+                    : null;
+
+                  return (
+                    <article key={m.id ?? `${m.title ?? "movie"}-${year ?? "unknown"}-${overviewSnippet}`} className={styles.movieCard}>
+                      {posterUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className={styles.moviePoster} src={posterUrl} alt={m.title ?? "Movie poster"} />
+                      ) : (
+                        <div className={styles.moviePosterPlaceholder} aria-hidden="true">
+                          No poster
+                        </div>
+                      )}
+                      <div className={styles.movieMeta}>
+                        <h3 className={styles.movieTitle}>{m.title ?? "Untitled"}</h3>
+                        <p className={styles.movieSub}>
+                          {year ? `Release: ${year}` : "Release: unknown"}{vote ? ` • Rating: ${vote}` : ""}
+                        </p>
+                        {overviewSnippet && <p className={styles.movieOverview}>{overviewSnippet}</p>}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
       </main>

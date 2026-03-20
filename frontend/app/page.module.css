@@ -60,6 +60,158 @@
   margin: 0;
 }
 
+/* Shared layout / form styling (used across page sections) */
+.section {
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.searchForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--button-secondary-border);
+  background: var(--background);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.button {
+  background: var(--text-primary);
+  color: var(--background);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.success {
+  color: #0a7a0a;
+}
+
+.error {
+  color: #b00020;
+}
+
+.card {
+  border-radius: 12px;
+  border: 1px solid var(--button-secondary-border);
+  background: rgba(0, 0, 0, 0.02);
+  padding: 12px;
+  max-width: 520px;
+}
+
+/* TMDB movie search UI */
+.resultsGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.movieCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-radius: 12px;
+  border: 1px solid var(--button-secondary-border);
+  background: rgba(0, 0, 0, 0.02);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.moviePoster {
+  width: 78px;
+  height: 118px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.moviePosterPlaceholder {
+  width: 78px;
+  height: 118px;
+  border-radius: 10px;
+  border: 1px dashed var(--button-secondary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.movieMeta {
+  min-width: 0;
+}
+
+.movieTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.movieSub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.movieOverview {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.resultsEmpty {
+  margin-top: 12px;
+}
+
 .intro {
   display: flex;
   flex-direction: column;
@@ -142,6 +294,10 @@ a.secondary {
     padding: 48px 24px;
   }
 
+  .resultsGrid {
+    grid-template-columns: 1fr;
+  }
+
   .intro {
     gap: 16px;
   }
@@ -172,5 +328,18 @@ a.secondary {
 
   .badge {
     background: rgba(255, 255, 255, 0.12);
+  }
+
+  .section {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .card,
+  .movieCard {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .input:focus {
+    border-color: rgba(255, 255, 255, 0.35);
   }
 }

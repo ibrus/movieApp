@@ -1,12 +1,16 @@
 server:
   port: 8080
+  error:
+    include-message: always
 
-# DB config is env-driven via standard Spring keys (spring.datasource.*).
-# You don't need this for Step 1's /api/hello, but it's ready for the next step.
+logging:
+  level:
+    com.movieapp.backend.tmdb: DEBUG
+    me.paulschwarz.springdotenv: DEBUG
 
 springdotenv:
   # Load .env from the repo root even when running from backend/
-  directory: ".."
+  directory: "/Users/ibrus/Projects/movieApp"
   filename: ".env"
   ignore-if-missing: true
 
