@@ -24,6 +24,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Clears fixed AppHeader (56px) */
+.layoutShell {
+  padding-top: 56px;
+  min-height: 100vh;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;

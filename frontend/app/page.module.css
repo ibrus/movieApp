@@ -26,7 +26,7 @@
   align-items: flex-start;
   justify-content: center;
   background-color: var(--foreground);
-  padding: 120px 60px;
+  padding: 40px 60px 80px;
 }
 
 .title {
@@ -206,6 +206,36 @@
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.movieActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actionButton {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--button-secondary-border);
+  background: var(--foreground);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButtonActive {
+  background: var(--text-primary);
+  color: var(--background);
+  border-color: transparent;
 }
 
 .resultsEmpty {

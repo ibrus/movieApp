@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./page.module.css";
+import { getStoredAuthToken, setStoredAuthToken } from "./lib/auth-token";
 import { useEffect, useState } from "react";
 
 type HelloResponse = {
@@ -37,6 +38,26 @@ type TmdbMovieSearchResponse = {
   results: TmdbMovieSearchResult[];
 };
 
+type Sentiment = "NONE" | "LIKE" | "DISLIKE";
+
+type MovieStateResult = {
+  tmdbId: number;
+  title: string;
+  posterPath: string | null;
+  releaseDate: string | null;
+  watchlist: boolean;
+  sentiment: Sentiment;
+};
+
+type LocalMovieState = {
+  watchlist: boolean;
+  sentiment: Sentiment;
+};
+
+function defaultLocalState(): LocalMovieState {
+  return { watchlist: false, sentiment: "NONE" };
+}
+
 export default function Home() {
   const [hello, setHello] = useState<HelloResponse | null>(null);
   const [helloError, setHelloError] = useState<string | null>(null);
@@ -64,6 +85,16 @@ export default function Home() {
   const [movieSearchError, setMovieSearchError] = useState<string | null>(null);
   const [movieSearchPerformed, setMovieSearchPerformed] = useState(false);
   const [movieSearchResults, setMovieSearchResults] = useState<TmdbMovieSearchResult[]>([]);
+  const [movieStates, setMovieStates] = useState<Record<number, LocalMovieState>>({});
+  const [movieStatePending, setMovieStatePending] = useState<Set<string>>(() => new Set());
+  const [movieStateError, setMovieStateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = getStoredAuthToken();
+    if (stored) {
+      setAuthToken(stored);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +201,7 @@ export default function Home() {
         }
         if (data?.token) {
           setAuthToken(data.token);
+          setStoredAuthToken(data.token);
         }
         setProfileError(null);
         setLoginMessage("Login successful.");
@@ -241,6 +273,7 @@ export default function Home() {
     }
 
     setMovieSearchError(null);
+    setMovieStateError(null);
     setMovieSearchLoading(true);
     setMovieSearchPerformed(true);
     setMovieSearchResults([]);
@@ -278,6 +311,93 @@ export default function Home() {
       setMovieSearchError(e instanceof Error ? e.message : String(e));
     } finally {
       setMovieSearchLoading(false);
+    }
+  }
+
+  function setPendingKey(key: string, on: boolean) {
+    setMovieStatePending((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  async function handleMovieStateAction(
+    movie: TmdbMovieSearchResult,
+    tmdbId: number,
+    action: "like" | "dislike" | "watchlist",
+  ) {
+    if (!authToken) {
+      setMovieStateError("Log in first to save movies.");
+      return;
+    }
+
+    const pendingKey = `${tmdbId}:${action}`;
+    setMovieStateError(null);
+    setPendingKey(pendingKey, true);
+
+    const prevState = movieStates[tmdbId] ?? defaultLocalState();
+    let nextWatchlist = prevState.watchlist;
+    let nextSentiment = prevState.sentiment;
+    if (action === "like") {
+      nextSentiment = prevState.sentiment === "LIKE" ? "NONE" : "LIKE";
+    } else if (action === "dislike") {
+      nextSentiment = prevState.sentiment === "DISLIKE" ? "NONE" : "DISLIKE";
+    } else {
+      nextWatchlist = !prevState.watchlist;
+    }
+
+    const title = (movie.title ?? "").trim() || "Untitled";
+    const releaseRaw = movie.release_date?.trim();
+    const releaseDate = releaseRaw ? releaseRaw.slice(0, 10) : null;
+
+    try {
+      const res = await fetch(`/api/movies/${tmdbId}/state`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          title,
+          posterPath: movie.poster_path ?? null,
+          releaseDate,
+          watchlist: nextWatchlist,
+          sentiment: nextSentiment,
+        }),
+        cache: "no-store",
+      });
+
+      const text = await res.text();
+      let parsed: unknown = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        // ignore json parse errors; we still show status text below
+      }
+
+      if (!res.ok) {
+        const message =
+          typeof parsed === "object" && parsed && "message" in parsed
+            ? String((parsed as { message?: unknown }).message ?? `Could not save (${res.status})`)
+            : `Could not save (${res.status})`;
+        setMovieStateError(message);
+        return;
+      }
+
+      const data = parsed as MovieStateResult;
+      setMovieStates((prev) => ({
+        ...prev,
+        [tmdbId]: {
+          watchlist: data.watchlist,
+          sentiment: data.sentiment,
+        },
+      }));
+    } catch (e) {
+      setMovieStateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPendingKey(pendingKey, false);
     }
   }
 
@@ -434,6 +554,7 @@ export default function Home() {
           )}
 
           {movieSearchError && <p className={styles.error}>{movieSearchError}</p>}
+          {movieStateError && <p className={styles.error}>{movieStateError}</p>}
           {movieSearchLoading && <p className={styles.muted}>Calling TMDB…</p>}
 
           {movieSearchPerformed && !movieSearchLoading && movieSearchResults.length === 0 && !movieSearchError && (
@@ -454,6 +575,13 @@ export default function Home() {
                   const posterUrl = m.poster_path
                     ? `https://image.tmdb.org/t/p/w200${m.poster_path}`
                     : null;
+                  const tmdbId = typeof m.id === "number" ? m.id : null;
+                  const local = tmdbId != null ? (movieStates[tmdbId] ?? defaultLocalState()) : null;
+                  const rowBusy =
+                    tmdbId != null &&
+                    (movieStatePending.has(`${tmdbId}:like`) ||
+                      movieStatePending.has(`${tmdbId}:dislike`) ||
+                      movieStatePending.has(`${tmdbId}:watchlist`));
 
                   return (
                     <article key={m.id ?? `${m.title ?? "movie"}-${year ?? "unknown"}-${overviewSnippet}`} className={styles.movieCard}>
@@ -471,6 +599,37 @@ export default function Home() {
                           {year ? `Release: ${year}` : "Release: unknown"}{vote ? ` • Rating: ${vote}` : ""}
                         </p>
                         {overviewSnippet && <p className={styles.movieOverview}>{overviewSnippet}</p>}
+                        {tmdbId != null && local && (
+                          <div className={styles.movieActions}>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${local.sentiment === "LIKE" ? styles.actionButtonActive : ""}`}
+                              disabled={!authToken || rowBusy}
+                              onClick={() => void handleMovieStateAction(m, tmdbId, "like")}
+                              title={!authToken ? "Log in to save" : local.sentiment === "LIKE" ? "Remove like" : "Like"}
+                            >
+                              {movieStatePending.has(`${tmdbId}:like`) ? "…" : "Like"}
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${local.sentiment === "DISLIKE" ? styles.actionButtonActive : ""}`}
+                              disabled={!authToken || rowBusy}
+                              onClick={() => void handleMovieStateAction(m, tmdbId, "dislike")}
+                              title={!authToken ? "Log in to save" : local.sentiment === "DISLIKE" ? "Remove dislike" : "Dislike"}
+                            >
+                              {movieStatePending.has(`${tmdbId}:dislike`) ? "…" : "Dislike"}
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.actionButton} ${local.watchlist ? styles.actionButtonActive : ""}`}
+                              disabled={!authToken || rowBusy}
+                              onClick={() => void handleMovieStateAction(m, tmdbId, "watchlist")}
+                              title={!authToken ? "Log in to save" : local.watchlist ? "Remove from watchlist" : "Add to watchlist"}
+                            >
+                              {movieStatePending.has(`${tmdbId}:watchlist`) ? "…" : "Watchlist"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </article>
                   );
